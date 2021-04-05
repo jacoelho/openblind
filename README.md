@@ -1,6 +1,6 @@
 # openblind
 
-Openblind parses a widely used site reviews and interviews.
+Openblind parses a widely used website with job reviews and interviews.
 
 ## Usage
 
