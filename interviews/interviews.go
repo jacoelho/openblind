@@ -17,7 +17,6 @@ var (
 	interviewRe        = regexp.MustCompile(`^Interview(?P<ID>\d+)Container$`)
 	matcherContainer   = openblind.WithDataTestRe(interviewRe)
 	matcherTitle       = openblind.WithDataTestRe(regexp.MustCompile(`^Interview\d+Title$`))
-	matcherRating      = openblind.WithDataTestRe(regexp.MustCompile(`^Interview\d+Rating$`))
 	matcherApplication = openblind.WithDataTestRe(regexp.MustCompile(`^Interview\d+ApplicationDetails$`))
 	matcherProcess     = openblind.WithDataTestRe(regexp.MustCompile(`^Interview\d+Process$`))
 	matcherQuestions   = openblind.WithDataTestRe(regexp.MustCompile(`^Interview\d+Questions$`))
@@ -44,8 +43,7 @@ func parseID(node *html.Node) (string, error) {
 	var value string
 
 	_, found := openblind.Find(node, func(n *html.Node) bool {
-		v, ok := openblind.WithAttr(n, func(s string) bool { return s == "data-test" })
-
+		v, ok := openblind.WithAttr(n, "data-test")
 		if ok && interviewRe.MatchString(v) {
 			idx := interviewRe.SubexpIndex("ID")
 			value = interviewRe.FindStringSubmatch(v)[idx]
@@ -62,15 +60,7 @@ func parseID(node *html.Node) (string, error) {
 
 // <time dateTime="2021-3-25">25 Mar 2021</time>
 func parseDateTime(node *html.Node) (time.Time, error) {
-	var value string
-
-	_, found := openblind.Find(node, func(n *html.Node) bool {
-		v, ok := openblind.WithAttr(n, func(s string) bool {
-			return s == "datetime"
-		})
-		value = v
-		return ok
-	})
+	value, found := openblind.AttrValue(node, "datetime")
 	if !found {
 		return time.Time{}, ErrParseDate
 	}
@@ -93,7 +83,6 @@ func parseApplication(node *html.Node) ([]string, error) {
 		return nil, ErrParseApplication
 	}
 
-	// it always starts with word Application
 	return openblind.ExtractText(applicationNode), nil
 }
 
@@ -111,6 +100,7 @@ func parseQuestions(node *html.Node) ([]string, error) {
 	if !found {
 		return nil, ErrParseQuestions
 	}
+
 	return openblind.ExtractText(questionsNode), nil
 }
 

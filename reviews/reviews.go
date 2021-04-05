@@ -43,8 +43,7 @@ func parseID(node *html.Node) (string, error) {
 	var value string
 
 	_, found := openblind.Find(node, func(n *html.Node) bool {
-		v, ok := openblind.WithAttr(n, func(s string) bool { return s == "id" })
-
+		v, ok := openblind.WithAttr(n, "id")
 		if ok && reviewRe.MatchString(v) {
 			idx := reviewRe.SubexpIndex("ID")
 			value = reviewRe.FindStringSubmatch(v)[idx]
@@ -60,21 +59,12 @@ func parseID(node *html.Node) (string, error) {
 }
 
 func parseDatetime(node *html.Node) (time.Time, error) {
-	var value string
-
-	rating, found := openblind.Find(node, func(n *html.Node) bool {
-		v, ok := openblind.WithAttr(n, func(s string) bool { return s == "class" })
-		return ok && v == "date subtle small"
-	})
+	rating, found := openblind.Find(node, openblind.WithClass("date subtle small"))
 	if !found {
 		return time.Time{}, ErrParseRating
 	}
 
-	_, found = openblind.Find(rating, func(n *html.Node) bool {
-		v, ok := openblind.WithAttr(n, func(s string) bool { return s == "datetime" })
-		value = v
-		return ok
-	})
+	value, found := openblind.AttrValue(rating, "datetime")
 	if !found {
 		return time.Time{}, ErrParseRating
 	}
@@ -95,21 +85,12 @@ func parseDatetime(node *html.Node) (time.Time, error) {
 }
 
 func parseRating(node *html.Node) (float64, error) {
-	var value string
-
-	rating, found := openblind.Find(node, func(n *html.Node) bool {
-		v, ok := openblind.WithAttr(n, func(s string) bool { return s == "class" })
-		return ok && v == "rating"
-	})
+	rating, found := openblind.Find(node, openblind.WithClass("rating"))
 	if !found {
 		return 0, ErrParseRating
 	}
 
-	_, found = openblind.Find(rating, func(n *html.Node) bool {
-		v, ok := openblind.WithAttr(n, func(s string) bool { return s == "title" })
-		value = v
-		return ok
-	})
+	value, found := openblind.AttrValue(rating, "title")
 	if !found {
 		return 0, ErrParseRating
 	}
