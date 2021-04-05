@@ -78,13 +78,13 @@ func parseDateTime(node *html.Node) (time.Time, error) {
 	return time.Parse(datetimeFormat, value)
 }
 
-func parseTitle(node *html.Node) (string, error) {
+func parseTitle(node *html.Node) ([]string, error) {
 	titleNode, found := openblind.Find(node, matcherTitle)
 	if !found {
-		return "", ErrParseTitle
+		return nil, ErrParseTitle
 	}
 
-	return strings.Join(openblind.ExtractText(titleNode), ","), nil
+	return openblind.ExtractText(titleNode), nil
 }
 
 func parseApplication(node *html.Node) ([]string, error) {
@@ -94,7 +94,7 @@ func parseApplication(node *html.Node) ([]string, error) {
 	}
 
 	// it always starts with word Application
-	return openblind.RemoveStrings("Application")(openblind.ExtractText(applicationNode)), nil
+	return openblind.ExtractText(applicationNode), nil
 }
 
 func parseProcess(node *html.Node) ([]string, error) {
@@ -103,7 +103,7 @@ func parseProcess(node *html.Node) ([]string, error) {
 		return nil, ErrParseProcess
 	}
 
-	return openblind.FlattenByNewLine(openblind.ExtractText(processNode)), nil
+	return openblind.ExtractText(processNode), nil
 }
 
 func parseQuestions(node *html.Node) ([]string, error) {
@@ -111,7 +111,7 @@ func parseQuestions(node *html.Node) ([]string, error) {
 	if !found {
 		return nil, ErrParseQuestions
 	}
-	return openblind.RemoveStrings("Answer Question", "1 Answer")(openblind.FlattenByNewLine(openblind.ExtractText(questionsNode))), nil
+	return openblind.ExtractText(questionsNode), nil
 }
 
 func parseInterview(node *html.Node) (Interview, error) {
@@ -150,10 +150,10 @@ func parseInterview(node *html.Node) (Interview, error) {
 	return Interview{
 		ID:          id,
 		Date:        datetime,
-		Title:       title,
-		Application: application,
-		Process:     process,
-		Questions:   questions,
+		Title:       strings.Join(title, ","),
+		Application: openblind.RemoveStrings("Application")(openblind.FlattenByNewLine(application)),
+		Process:     openblind.FlattenByNewLine(process),
+		Questions:   openblind.RemoveStrings("Answer Question", "1 Answer")(openblind.FlattenByNewLine(questions)),
 	}, nil
 }
 
