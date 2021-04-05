@@ -61,19 +61,19 @@ func parseID(node *html.Node) (string, error) {
 func parseDatetime(node *html.Node) (time.Time, error) {
 	rating, found := openblind.Find(node, openblind.WithClass("date subtle small"))
 	if !found {
-		return time.Time{}, ErrParseRating
+		return time.Time{}, ErrParseDate
 	}
 
 	value, found := openblind.AttrValue(rating, "datetime")
 	if !found {
-		return time.Time{}, ErrParseRating
+		return time.Time{}, ErrParseDate
 	}
 
 	// Split by ( leaving parseable part on the left side
 	// example string: Sun Mar 28 2021 06:27:08 GMT+0100 (British Summer Time)
 	split := strings.Split(value, " (")
 	if len(split) != 2 {
-		return time.Time{}, ErrParseRating
+		return time.Time{}, ErrParseDate
 	}
 
 	parseTime, err := time.Parse(datetimeFormat, split[0])
