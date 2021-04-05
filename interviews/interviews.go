@@ -14,7 +14,6 @@ import (
 const datetimeFormat = "2006-1-2"
 
 var (
-	ErrNoDateTime      = errors.New("no date time")
 	interviewRe        = regexp.MustCompile(`^Interview(?P<ID>\d+)Container$`)
 	matcherContainer   = openblind.WithDataTestRe(interviewRe)
 	matcherTitle       = openblind.WithDataTestRe(regexp.MustCompile(`^Interview\d+Title$`))
@@ -23,6 +22,7 @@ var (
 	matcherProcess     = openblind.WithDataTestRe(regexp.MustCompile(`^Interview\d+Process$`))
 	matcherQuestions   = openblind.WithDataTestRe(regexp.MustCompile(`^Interview\d+Questions$`))
 
+	ErrNoDateTime       = errors.New("no date time")
 	ErrParseID          = errors.New("failed to parse id")
 	ErrParseDate        = errors.New("failed to parse date")
 	ErrParseTitle       = errors.New("failed to parse title")
