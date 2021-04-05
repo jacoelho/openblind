@@ -1,12 +1,14 @@
 package openblind
 
 import (
+	"regexp"
+
 	"golang.org/x/net/html"
 )
 
 type Matcher func(*html.Node) bool
 
-func WithAttr(n *html.Node, fn func(string) bool) (string, bool) {
+func WithAttrFn(n *html.Node, fn func(string) bool) (string, bool) {
 	for _, a := range n.Attr {
 		if fn(a.Key) {
 			return a.Val, true
@@ -15,20 +17,48 @@ func WithAttr(n *html.Node, fn func(string) bool) (string, bool) {
 	return "", false
 }
 
+func WithAttr(n *html.Node, s string) (string, bool) {
+	return WithAttrFn(n, func(v string) bool {
+		return s == v
+	})
+}
+
 func WithID(id string) Matcher {
 	return func(n *html.Node) bool {
-		v, found := WithAttr(n, func(s string) bool { return s == "id" })
+		v, found := WithAttr(n, "id")
 		return found && v == id
 	}
 }
 
 func WithClass(class string) Matcher {
 	return func(n *html.Node) bool {
-		v, found := WithAttr(n, func(s string) bool { return s == "class" })
+		v, found := WithAttr(n, "class")
 		return found && v == class
 	}
 }
 
+func WithDataTest(value string) Matcher {
+	return func(n *html.Node) bool {
+		v, found := WithAttr(n, "data-test")
+		return found && v == value
+	}
+}
+
+func WithDataTestRe(re *regexp.Regexp) Matcher {
+	return func(n *html.Node) bool {
+		v, found := WithAttr(n, "data-test")
+		return found && re.MatchString(v)
+	}
+}
+
+func WithIDRe(re *regexp.Regexp) Matcher {
+	return func(n *html.Node) bool {
+		v, found := WithAttr(n, "id")
+		return found && re.MatchString(v)
+	}
+}
+
+// Find returns first node that matches Matcher
 func Find(node *html.Node, m Matcher) (*html.Node, bool) {
 	if m(node) {
 		return node, true
@@ -71,4 +101,18 @@ func ExtractText(node *html.Node) []string {
 	}
 
 	return result
+}
+
+func AttrValue(node *html.Node, attr string) (string, bool) {
+	var value string
+
+	_, found := Find(node, func(n *html.Node) bool {
+		v, ok := WithAttr(n, attr)
+		if ok {
+			value = v
+		}
+		return ok
+	})
+
+	return value, found
 }

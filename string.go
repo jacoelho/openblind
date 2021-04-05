@@ -1,10 +1,7 @@
 package openblind
 
 import (
-	"regexp"
 	"strings"
-
-	"golang.org/x/net/html"
 )
 
 func RemoveStrings(remove ...string) func(s []string) []string {
@@ -52,25 +49,4 @@ func FlattenByNewLine(v []string) []string {
 	return Flatten(func(s string) []string {
 		return strings.Split(s, "\n")
 	})(v)
-}
-
-func WithDataTest(value string) Matcher {
-	return func(n *html.Node) bool {
-		v, found := WithAttr(n, func(s string) bool { return s == "data-test" })
-		return found && v == value
-	}
-}
-
-func WithDataTestRe(re *regexp.Regexp) Matcher {
-	return func(n *html.Node) bool {
-		v, found := WithAttr(n, func(s string) bool { return s == "data-test" })
-		return found && re.MatchString(v)
-	}
-}
-
-func WithIDRe(re *regexp.Regexp) Matcher {
-	return func(n *html.Node) bool {
-		v, found := WithAttr(n, func(s string) bool { return s == "id" })
-		return found && re.MatchString(v)
-	}
 }
