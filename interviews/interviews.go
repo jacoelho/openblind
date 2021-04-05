@@ -1,4 +1,4 @@
-package openblind
+package interviews
 
 import (
 	"errors"
@@ -22,6 +22,13 @@ var (
 	matcherApplication = openblind.WithDataTestRe(regexp.MustCompile(`^Interview\d+ApplicationDetails$`))
 	matcherProcess     = openblind.WithDataTestRe(regexp.MustCompile(`^Interview\d+Process$`))
 	matcherQuestions   = openblind.WithDataTestRe(regexp.MustCompile(`^Interview\d+Questions$`))
+
+	ErrParseID          = errors.New("failed to parse id")
+	ErrParseDate        = errors.New("failed to parse date")
+	ErrParseTitle       = errors.New("failed to parse title")
+	ErrParseApplication = errors.New("failed to parse application")
+	ErrParseProcess     = errors.New("failed to parse process")
+	ErrParseQuestions   = errors.New("failed to parse questions")
 )
 
 type Interview struct {
@@ -33,8 +40,28 @@ type Interview struct {
 	Questions   []string  `json:"questions,omitempty"`
 }
 
+func parseID(node *html.Node) (string, error) {
+	var value string
+
+	_, found := openblind.Find(node, func(n *html.Node) bool {
+		v, ok := openblind.WithAttr(n, func(s string) bool { return s == "data-test" })
+
+		if ok && interviewRe.MatchString(v) {
+			idx := interviewRe.SubexpIndex("ID")
+			value = interviewRe.FindStringSubmatch(v)[idx]
+		}
+
+		return ok
+	})
+	if !found {
+		return "", ErrParseID
+	}
+
+	return value, nil
+}
+
 // <time dateTime="2021-3-25">25 Mar 2021</time>
-func ParseDateTime(node *html.Node) (time.Time, error) {
+func parseDateTime(node *html.Node) (time.Time, error) {
 	var value string
 
 	_, found := openblind.Find(node, func(n *html.Node) bool {
@@ -45,78 +72,83 @@ func ParseDateTime(node *html.Node) (time.Time, error) {
 		return ok
 	})
 	if !found {
-		return time.Time{}, errors.New("failed to find datetime")
+		return time.Time{}, ErrParseDate
 	}
 
 	return time.Parse(datetimeFormat, value)
 }
 
-func ParseTitle(node *html.Node) (string, error) {
+func parseTitle(node *html.Node) (string, error) {
 	titleNode, found := openblind.Find(node, matcherTitle)
 	if !found {
-		return "", errors.New("failed to find title")
+		return "", ErrParseTitle
 	}
 
-	return strings.Join(openblind.Text(titleNode), ","), nil
+	return strings.Join(openblind.ExtractText(titleNode), ","), nil
 }
 
-func ParseApplication(node *html.Node) ([]string, error) {
+func parseApplication(node *html.Node) ([]string, error) {
 	applicationNode, found := openblind.Find(node, matcherApplication)
 	if !found {
-		return nil, errors.New("failed to find application")
+		return nil, ErrParseApplication
 	}
 
 	// it always starts with word Application
-	return openblind.RemoveStrings("Application")(openblind.Text(applicationNode)), nil
+	return openblind.RemoveStrings("Application")(openblind.ExtractText(applicationNode)), nil
 }
 
-func ParseProcess(node *html.Node) ([]string, error) {
+func parseProcess(node *html.Node) ([]string, error) {
 	processNode, found := openblind.Find(node, matcherProcess)
 	if !found {
-		return nil, errors.New("failed to find process")
+		return nil, ErrParseProcess
 	}
 
-	return openblind.FlattenByNewLine(openblind.Text(processNode)), nil
+	return openblind.FlattenByNewLine(openblind.ExtractText(processNode)), nil
 }
 
-func ParseQuestions(node *html.Node) ([]string, error) {
+func parseQuestions(node *html.Node) ([]string, error) {
 	questionsNode, found := openblind.Find(node, matcherQuestions)
 	if !found {
-		return nil, errors.New("failed to find process")
+		return nil, ErrParseQuestions
 	}
-
-	return openblind.RemoveStrings("Answer Question", "1 Answer")(openblind.FlattenByNewLine(openblind.Text(questionsNode))), nil
+	return openblind.RemoveStrings("Answer Question", "1 Answer")(openblind.FlattenByNewLine(openblind.ExtractText(questionsNode))), nil
 }
 
 func parseInterview(node *html.Node) (Interview, error) {
 	var result Interview
 
-	datetime, err := ParseDateTime(node)
+	id, err := parseID(node)
+	if err != nil {
+		return result, err
+	}
+
+	datetime, err := parseDateTime(node)
 	if err != nil {
 		return result, ErrNoDateTime
 	}
 
-	title, err := ParseTitle(node)
+	title, err := parseTitle(node)
 	if err != nil {
 		return result, err
 	}
 
-	application, err := ParseApplication(node)
+	application, err := parseApplication(node)
 	if err != nil {
 		return result, err
 	}
 
-	process, err := ParseProcess(node)
+	process, err := parseProcess(node)
 	if err != nil {
 		return result, err
 	}
 
-	questions, err := ParseQuestions(node)
+	questions, err := parseQuestions(node)
 	if err != nil {
 		return result, err
 	}
 
 	return Interview{
+		ID:          id,
 		Date:        datetime,
 		Title:       title,
 		Application: application,

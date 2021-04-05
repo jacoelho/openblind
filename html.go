@@ -22,6 +22,13 @@ func WithID(id string) Matcher {
 	}
 }
 
+func WithClass(class string) Matcher {
+	return func(n *html.Node) bool {
+		v, found := WithAttr(n, func(s string) bool { return s == "class" })
+		return found && v == class
+	}
+}
+
 func Find(node *html.Node, m Matcher) (*html.Node, bool) {
 	if m(node) {
 		return node, true
@@ -53,7 +60,7 @@ func FindAll(node *html.Node, m Matcher) []*html.Node {
 	return result
 }
 
-func Text(node *html.Node) []string {
+func ExtractText(node *html.Node) []string {
 	nodes := FindAll(node, func(n *html.Node) bool {
 		return n.Type == html.TextNode
 	})

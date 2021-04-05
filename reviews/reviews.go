@@ -32,13 +32,14 @@ var (
 type Review struct {
 	ID     string    `json:"id,omitempty"`
 	Date   time.Time `json:"date,omitempty"`
+	Title  string    `json:"title,omitempty"`
 	Rating float64   `json:"rating,omitempty"`
 	Pros   []string  `json:"pros,omitempty"`
 	Cons   []string  `json:"cons,omitempty"`
 	Advice []string  `json:"advice,omitempty"`
 }
 
-func ParseID(node *html.Node) (string, error) {
+func parseID(node *html.Node) (string, error) {
 	var value string
 
 	_, found := openblind.Find(node, func(n *html.Node) bool {
@@ -58,7 +59,7 @@ func ParseID(node *html.Node) (string, error) {
 	return value, nil
 }
 
-func ParseDatetime(node *html.Node) (time.Time, error) {
+func parseDatetime(node *html.Node) (time.Time, error) {
 	var value string
 
 	rating, found := openblind.Find(node, func(n *html.Node) bool {
@@ -78,7 +79,8 @@ func ParseDatetime(node *html.Node) (time.Time, error) {
 		return time.Time{}, ErrParseRating
 	}
 
-	// Sun Mar 28 2021 06:27:08 GMT+0100 (British Summer Time)
+	// Split by ( leaving parseable part on the left side
+	// example string: Sun Mar 28 2021 06:27:08 GMT+0100 (British Summer Time)
 	split := strings.Split(value, " (")
 	if len(split) != 2 {
 		return time.Time{}, ErrParseRating
@@ -92,7 +94,7 @@ func ParseDatetime(node *html.Node) (time.Time, error) {
 	return parseTime, nil
 }
 
-func ParseRating(node *html.Node) (float64, error) {
+func parseRating(node *html.Node) (float64, error) {
 	var value string
 
 	rating, found := openblind.Find(node, func(n *html.Node) bool {
@@ -120,79 +122,82 @@ func ParseRating(node *html.Node) (float64, error) {
 	return parsedRating, nil
 }
 
-func ParseReviewTitle(node *html.Node) ([]string, error) {
-	titleNode, found := openblind.Find(node, func(n *html.Node) bool {
-		_, found := openblind.WithAttr(n, func(s string) bool { return s == "mainText mb-0" })
-		return found
-	})
+func parseTitle(node *html.Node) ([]string, error) {
+	titleNode, found := openblind.Find(node, openblind.WithClass("h2 summary strong mb-xsm mt-0"))
 	if !found {
 		return nil, ErrParseTitle
 	}
 
-	return openblind.Text(titleNode), nil
+	return openblind.ExtractText(titleNode), nil
 }
 
-func ParsePros(node *html.Node) ([]string, error) {
+func parsePros(node *html.Node) ([]string, error) {
 	pros, found := openblind.Find(node, openblind.WithDataTest("pros"))
 	if !found {
 		return nil, ErrParsePros
 	}
 
-	return openblind.Text(pros), nil
+	return openblind.ExtractText(pros), nil
 }
 
-func ParseCons(node *html.Node) ([]string, error) {
+func parseCons(node *html.Node) ([]string, error) {
 	cons, found := openblind.Find(node, openblind.WithDataTest("cons"))
 	if !found {
 		return nil, ErrParseCons
 	}
 
-	return openblind.Text(cons), nil
+	return openblind.ExtractText(cons), nil
 }
 
-func ParseAdvice(node *html.Node) ([]string, error) {
+func parseAdvice(node *html.Node) ([]string, error) {
 	advice, found := openblind.Find(node, openblind.WithDataTest("advice-management"))
 	if !found {
 		return nil, ErrParseAdvice
 	}
 
-	return openblind.Text(advice), nil
+	return openblind.ExtractText(advice), nil
 }
 
-func ParseReview(node *html.Node) (Review, error) {
+func parseReview(node *html.Node) (Review, error) {
 	var result Review
 
-	id, err := ParseID(node)
+	id, err := parseID(node)
 	if err != nil {
 		return result, err
 	}
 
-	reviewTime, err := ParseDatetime(node)
+	reviewTime, err := parseDatetime(node)
 	if err != nil {
 		return result, err
 	}
 
-	rating, err := ParseRating(node)
+	title, err := parseTitle(node)
 	if err != nil {
 		return result, err
 	}
 
-	pros, err := ParsePros(node)
+	rating, err := parseRating(node)
 	if err != nil {
 		return result, err
 	}
 
-	cons, err := ParseCons(node)
+	pros, err := parsePros(node)
+	if err != nil {
+		return result, err
+	}
+
+	cons, err := parseCons(node)
 	if err != nil {
 		return result, err
 	}
 
 	// not all reviews have advice
-	advice, _ := ParseAdvice(node)
+	advice, _ := parseAdvice(node)
 
 	return Review{
 		ID:     id,
 		Date:   reviewTime.UTC(),
+		Title:  strings.Join(openblind.FlattenByNewLine(title), ","),
 		Rating: rating,
 		Pros:   openblind.FlattenByNewLine(pros),
 		Cons:   openblind.FlattenByNewLine(cons),
@@ -215,7 +220,7 @@ func Parse(r io.Reader) ([]Review, error) {
 
 	result := make([]Review, 0, len(reviews))
 	for _, review := range reviews {
-		res, err := ParseReview(review)
+		res, err := parseReview(review)
 		if err != nil {
 			return nil, err
 		}
