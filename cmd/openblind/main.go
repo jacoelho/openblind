@@ -20,6 +20,7 @@ type config struct {
 	targetURL string
 	timeout   time.Duration
 	section   string
+	userAgent string
 }
 
 const (
@@ -32,6 +33,7 @@ func main() {
 	flag.StringVar(&c.targetURL, "url", "", "url to parse")
 	flag.DurationVar(&c.timeout, "timeout", 5*time.Second, "timeout duration")
 	flag.StringVar(&c.section, "section", "interviews", "type of section, one of: interviews, reviews")
+	flag.StringVar(&c.userAgent, "user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36", "user agent to use")
 	flag.Parse()
 
 	if c.targetURL == "" {
@@ -68,7 +70,7 @@ func run(cfg config) error {
 		return err
 	}
 
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36")
+	req.Header.Set("User-Agent", cfg.userAgent)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
