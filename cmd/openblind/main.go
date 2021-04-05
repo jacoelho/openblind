@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -14,7 +15,10 @@ import (
 	"github.com/jacoelho/openblind/reviews"
 )
 
-const errorExitCode = 1
+const (
+	exitCodeOK    = 0
+	exitCodeError = 1
+)
 
 type config struct {
 	targetURL string
@@ -28,27 +32,39 @@ const (
 	sectionReviews    = "reviews"
 )
 
+var version string = "development"
+
 func main() {
-	var c config
+	var (
+		c           config
+		showVersion bool
+	)
+
 	flag.StringVar(&c.targetURL, "url", "", "url to parse")
 	flag.DurationVar(&c.timeout, "timeout", 5*time.Second, "timeout duration")
 	flag.StringVar(&c.section, "section", "interviews", "type of section, one of: interviews, reviews")
 	flag.StringVar(&c.userAgent, "user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36", "user agent to use")
+	flag.BoolVar(&showVersion, "version", false, "show version")
 	flag.Parse()
+
+	if showVersion {
+		fmt.Println(version)
+		os.Exit(exitCodeOK)
+	}
 
 	if c.targetURL == "" {
 		flag.Usage()
-		os.Exit(errorExitCode)
+		os.Exit(exitCodeError)
 	}
 
 	if c.section != sectionInterviews && c.section != sectionReviews {
 		flag.Usage()
-		os.Exit(errorExitCode)
+		os.Exit(exitCodeError)
 	}
 
 	if err := run(c); err != nil {
 		log.Println(err)
-		os.Exit(errorExitCode)
+		os.Exit(exitCodeError)
 	}
 
 }
